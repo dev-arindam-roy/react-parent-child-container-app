@@ -1,0 +1,12 @@
+.mtx-10 {
+    margin-top: -10px;
+}
+tbody, thead {
+    font-size: 14px;
+}
+tr td:last-child {
+    width: 140px;
+}
+.mtx-4 {
+    margin-top: -4px;
+}

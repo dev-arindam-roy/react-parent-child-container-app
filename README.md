@@ -1,70 +1,384 @@
-# Getting Started with Create React App
+# Parent & Child - Container - Prop - App
+> React prop application - parent to child & child to parent through a container or holder component
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Check the Application -
 
-## Available Scripts
+```js
+import React, { useState, useEffect } from "react";
+import Header from "./Header";
+import UserForm from "./UserForm";
+import UserList from "./UserList";
+import * as Helper from "../../utils/Helpers";
+import { v4 as uuidv4 } from "uuid";
+import Container from "react-bootstrap/Container";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
+import { toast } from "react-toastify";
+import Swal from "sweetalert2";
+import "./User.css";
 
-In the project directory, you can run:
+const initUserState = {
+  uuid: "",
+  firstName: "",
+  lastName: "",
+  email: "",
+  phoneNumber: "",
+};
 
-### `npm start`
+const UserContainer = () => {
+  const [user, setUser] = useState(initUserState);
+  const [userList, setUserList] = useState([]);
+  const [editUserIndex, setEditUserIndex] = useState(null);
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+  /** EMIT::take user data from the child component - UserList */
+  const emitOnTakeUserEventHandler = (formUser, haveUserEditIndex = null) => {
+    if (haveUserEditIndex !== null) {
+      const updatedUserList = userList.map((item, index) =>
+        index === haveUserEditIndex ? formUser : item
+      );
+      setUserList(updatedUserList);
+      toast.success("User updated successfully!");
+    } else {
+      const formUserAssignUuid = { ...formUser, uuid: uuidv4() };
+      setUserList([...userList, formUserAssignUuid]);
+      setUser(formUserAssignUuid);
+      toast.success("User added successfully!");
+    }
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+    onUserFormResetHandler();
+  };
 
-### `npm test`
+  /**  EMIT::reset the user from after add or edit user. It call from main component & child component - UserList */
+  const onUserFormResetHandler = () => {
+    setUser({
+      uuid: "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      phoneNumber: "",
+    });
+    setEditUserIndex(null);
+  };
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+  /** EMIT::delete user from the userList and it call from child component - UserList */
+  const emitOnUserDeleteEventHandler = (keyIndex) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You want to delete all the users",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#0d6efd",
+      cancelButtonColor: "#dc3545",
+      confirmButtonText: "Yes",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setUserList(userList.filter((_, index) => index !== keyIndex));
+        toast.success("User deleted successfully!");
+        onUserFormResetHandler();
+      }
+    });
+  };
 
-### `npm run build`
+  /** EMIT::edit an user, it call from child component - UserList */
+  const emitOnUserEditEventHandler = (keyIndex) => {
+    setUser(userList[keyIndex]);
+    setEditUserIndex(keyIndex);
+  };
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+  /** EMIT::create & load random users, it call from child component - Header */
+  const emitOnLoadUserEventHandler = () => {
+    let randomUserBucket = [];
+    for (let i = 1; i <= 100; i++) {
+      let _tempUser = {
+        uuid: uuidv4(),
+        firstName: Helper.getRandomString(),
+        lastName: Helper.getRandomString(),
+        email:
+          Helper.getRandomString() + "@" + Helper.getRandomString() + ".onex",
+        phoneNumber: Helper.getRandomPhoneNumber(),
+      };
+      randomUserBucket.push(_tempUser);
+    }
+    // merge old/previous users with the random created userbucket
+    const mergeUserList = [...userList, ...randomUserBucket];
+    setUserList(mergeUserList);
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+    Swal.fire({
+      title: "Please wait...",
+      html: "System is <strong>processing</strong> your request",
+      timer: 2000,
+      timerProgressBar: true,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+    }).then(() => {
+      Swal.close();
+      toast.success("Random user loaded successfully!");
+    });
+  };
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+  /** EMIT::delete all the users, it call from child component - Header */
+  const emitOndeleteAllUserEventHandler = () => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You want to delete all the users",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#0d6efd",
+      cancelButtonColor: "#dc3545",
+      confirmButtonText: "Yes",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setUserList([]);
+        toast.success("All user deleted successfully!");
+        onUserFormResetHandler();
+      }
+    });
+  };
 
-### `npm run eject`
+  /** check the latest userList in DOM state */
+  useEffect(() => {
+    console.log(userList);
+  }, [userList]);
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+  /** check the latest user in DOM state */
+  useEffect(() => {
+    console.log(user);
+  }, [user]);
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+  return (
+    <>
+      <Container fluid="md" className="mt-3">
+        <Header
+          onLoadUserEventFromChild={emitOnLoadUserEventHandler}
+          onDeleteAllUserEventFromChild={emitOndeleteAllUserEventHandler}
+          receiveUserListFromParent={userList}
+        />
+        <Row className="mt-3">
+          <Col xs={12} md={8}>
+            <UserList
+              receiveUserListFromParent={userList}
+              onUserDelete={emitOnUserDeleteEventHandler}
+              onUserEdit={emitOnUserEditEventHandler}
+            />
+          </Col>
+          <Col xs={12} md={4}>
+            <UserForm
+              receiveUserStateFromParent={user}
+              receiveEditUserIndex={editUserIndex}
+              onTakeUserFromChild={emitOnTakeUserEventHandler}
+              onUserFormReset={onUserFormResetHandler}
+            />
+          </Col>
+        </Row>
+      </Container>
+    </>
+  );
+};
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+export default UserContainer;
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```js
+import React, { useState, useEffect } from "react";
+import Card from "react-bootstrap/Card";
+import Form from "react-bootstrap/Form";
+import Button from "react-bootstrap/Button";
+import { FiUserPlus } from "react-icons/fi";
 
-## Learn More
+const UserForm = ({
+  receiveUserStateFromParent,
+  receiveEditUserIndex,
+  onTakeUserFromChild,
+  onUserFormReset,
+}) => {
+  const [getUser, setUser] = useState(receiveUserStateFromParent);
+  const [getEditUserIndex, setEditUserIndex] = useState(receiveEditUserIndex);
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+  const userFormSubmitHandler = (e) => {
+    e.preventDefault();
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+    //send data to parent component
+    onTakeUserFromChild(getUser, getEditUserIndex);
+  };
 
-### Code Splitting
+  const userFormResetHandler = () => {
+    onUserFormReset();
+  };
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+  useEffect(() => {
+    setUser(receiveUserStateFromParent);
+  }, [receiveUserStateFromParent]);
 
-### Analyzing the Bundle Size
+  useEffect(() => {
+    setEditUserIndex(receiveEditUserIndex);
+  }, [receiveEditUserIndex]);
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+  return (
+    <>
+      <h2>
+        <FiUserPlus className="mtx-10" /> Add / Edit User
+      </h2>
+      <Card>
+        <Card.Body>
+          <form onSubmit={userFormSubmitHandler}>
+            <Form.Group className="mb-3" controlId="user.firstName">
+              <Form.Label>
+                <strong>First Name:</strong>
+              </Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="First Name"
+                required
+                value={getUser?.firstName}
+                onChange={(e) =>
+                  setUser({ ...getUser, firstName: e.target.value })
+                }
+              />
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="user.lastName">
+              <Form.Label>
+                <strong>Last Name:</strong>
+              </Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Last Name"
+                required
+                value={getUser?.lastName}
+                onChange={(e) =>
+                  setUser({ ...getUser, lastName: e.target.value })
+                }
+              />
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="user.email">
+              <Form.Label>
+                <strong>Email Id:</strong>
+              </Form.Label>
+              <Form.Control
+                type="email"
+                placeholder="Email"
+                required
+                value={getUser?.email}
+                onChange={(e) => setUser({ ...getUser, email: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="user.phoneNumber">
+              <Form.Label>
+                <strong>Phone Number:</strong>
+              </Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Phone Number"
+                required
+                value={getUser?.phoneNumber}
+                onChange={(e) =>
+                  setUser({ ...getUser, phoneNumber: e.target.value })
+                }
+              />
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="user.phoneNumber">
+              <Button type="submit" variant="primary">
+                {getEditUserIndex !== null ? "Save Changes" : "Add User"}
+              </Button>{" "}
+              <Button
+                type="button"
+                variant={getEditUserIndex !== null ? "danger" : "secondary"}
+                onClick={userFormResetHandler}
+              >
+                {getEditUserIndex !== null ? "Cancel" : "Reset"}
+              </Button>{" "}
+            </Form.Group>
+          </form>
+        </Card.Body>
+      </Card>
+    </>
+  );
+};
 
-### Making a Progressive Web App
+export default UserForm;
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```js
+import React, { useState, useEffect } from "react";
+import {maskString} from '../../utils/Helpers';
+import Card from "react-bootstrap/Card";
+import Table from "react-bootstrap/Table";
+import Button from "react-bootstrap/Button";
+import { FiUsers } from "react-icons/fi";
 
-### Advanced Configuration
+const UserList = ({receiveUserListFromParent, onUserDelete, onUserEdit}) => {
+  const [getUserList, setUserList] = useState([]);
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+  useEffect(() => {
+    setUserList(receiveUserListFromParent);
+  }, [receiveUserListFromParent]);
 
-### Deployment
+  return (
+    <>
+      <h2>
+        <FiUsers className="mtx-10" /> User List ({getUserList.length})
+      </h2>
+      <Card>
+        <Card.Body>
+          <Table striped bordered hover size="sm">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>UUID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone No</th>
+                <th>#</th>
+              </tr>
+            </thead>
+            <tbody>
+              {getUserList && getUserList.length > 0 ? (
+                getUserList.map((item, index) => (
+                  <tr key={"user-" + index}>
+                    <td>{index + 1}</td>
+                    <td>{maskString(item.uuid)}</td>
+                    <td>{item.firstName + " " + item.lastName}</td>
+                    <td>{item.email}</td>
+                    <td>{item.phoneNumber}</td>
+                    <td>
+                      <Button
+                        type="button"
+                        variant="success"
+                        size="sm"
+                        onClick={() => onUserEdit(index)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="sm"
+                        className="mx-2"
+                        onClick={() => onUserDelete(index)}
+                      >
+                        Delete
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6}>No User Found! Please Add User</td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
+        </Card.Body>
+      </Card>
+    </>
+  );
+};
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+export default UserList;
+```
