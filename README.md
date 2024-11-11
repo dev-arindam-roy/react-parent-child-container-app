@@ -2,6 +2,7 @@
 > React prop application - parent to child & child to parent through a container or holder component
 
 ## Check the Application -
+[https://dev-arindam-roy.github.io/react-parent-child-container-app/](https://dev-arindam-roy.github.io/react-parent-child-container-app/)
 
 ```js
 import React, { useState, useEffect } from "react";
